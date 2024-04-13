@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import jsonData from './data/data.json';
-import axios from 'axios';
+// import axios from 'axios';
 import './Main.css';
 import Cookies from 'js-cookie';
 
