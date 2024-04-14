@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import jsonData from './data/data.json';
-// import axios from 'axios';
+import axios from 'axios';
 import './Main.css';
 import Cookies from 'js-cookie';
 
@@ -28,7 +28,7 @@ const BALLOT_BOXES = [
 ];
 
 function Main() {
-  const isLoggedIn = !!Cookies.get('token');
+  const isLoggedIn = !!Cookies.get(process.env.REACT_APP_TOKEN);
   if (!isLoggedIn)
     window.location.href = '/';
   const [message, setMessage] = useState('');
@@ -37,11 +37,14 @@ function Main() {
   const [searchResult, setSearchResult] = useState(null);
 
   const handleSearch = () => {
+    const isLoggedIn = !!Cookies.get(process.env.REACT_APP_TOKEN);
+    if (!isLoggedIn)
+        window.location.href = '/';
     setMessage('');
     const result = jsonData.find(item => item.Code === parseInt(searchValue));
     if (result != null) {
       setMobileNumberValue(result.Mobile);
-      result.Updated_Mobile = "";
+      // result.Updated_Mobile = "";
       for (var i = 0; i < BALLOT_BOXES.length; i++) {
         if (parseInt(searchValue) >= BALLOT_BOXES[i].from && parseInt(searchValue) <= BALLOT_BOXES[i].to) {
           result.Floor = BALLOT_BOXES[i].floor;
@@ -49,84 +52,153 @@ function Main() {
           setMessage('Floor: ' + result.Floor + ', Ballot Box: ' + result.Ballot_Box);
         }
       }
-      result.Registered = "YES/NO";
-      console.log(result);
+      // result.Registered = "YES/NO";
       setSearchResult(result);
     } else {
       setMessage('Engineer with ID ' + searchValue + ' not found'); 
     }
   };
 
-  const handleRegister = () => {
-    setMessage('Engineer registered successfully');
-    console.log(parseInt(searchValue));
+  const handleRegister = async () => {
+    const isLoggedIn = !!Cookies.get(process.env.REACT_APP_TOKEN);
+    if (!isLoggedIn)
+        window.location.href = '/';
+    try {
+      await axios.post(`${process.env.REACT_APP_OEA_BACKEND_HOST}/register/${searchValue}`);
+      setMessage('Engineer registered successfully');
+    } catch (error) {
+      setMessage('Failed to register engineer');
+    }
+  }
+  
+  const handleUnregister = async () => {
+    const isLoggedIn = !!Cookies.get(process.env.REACT_APP_TOKEN);
+    if (!isLoggedIn)
+        window.location.href = '/';
+    try {
+      await axios.delete(`${process.env.REACT_APP_OEA_BACKEND_HOST}/register/${searchValue}`);
+      setMessage('Engineer unregistered successfully');
+    } catch (error) {
+      setMessage('Failed to unregister engineer');
+    }
   }
 
-  const handleMobileNumberUpdate = () => {
-    setMessage('Mobile updated successfully');
-    console.log("update mobile", mobileNumberValue);
+  const checkRegister = async () => {
+    const isLoggedIn = !!Cookies.get(process.env.REACT_APP_TOKEN);
+    if (!isLoggedIn)
+        window.location.href = '/';
+    try {
+      const response = await axios.get(`${process.env.REACT_APP_OEA_BACKEND_HOST}/register/${searchValue}`);
+      setMessage(`Engineer with ID ${searchValue}: ${response.data.status}`);
+    } catch (error) {
+      setMessage('Failed to get vote');
+    }
+  }
+
+  const getUpdatedMobileNumber = async () => {
+    const isLoggedIn = !!Cookies.get(process.env.REACT_APP_TOKEN);
+    if (!isLoggedIn)
+        window.location.href = '/';
+    try {
+      const response = await axios.get(`${process.env.REACT_APP_OEA_BACKEND_HOST}/mobile/${searchValue}`);
+      setMessage(`Engineer with ID ${searchValue}: ${response.data.status}`);
+    } catch (error) {
+      setMessage('Failed to get vote');
+    }
+  }
+
+  const handleMobileNumberUpdate = async () => {
+    const isLoggedIn = !!Cookies.get(process.env.REACT_APP_TOKEN);
+    if (!isLoggedIn)
+        window.location.href = '/';
+    try {
+      await axios.post(`${process.env.REACT_APP_OEA_BACKEND_HOST}/mobile/${searchValue}`, {mobile: mobileNumberValue});
+      setMessage('Mobile updated successfully');
+    } catch (error) {
+      setMessage('Failed to update mobile');
+    }
+  }
+  
+  const removeMobileNumberUpdate = async () => {
+    const isLoggedIn = !!Cookies.get(process.env.REACT_APP_TOKEN);
+    if (!isLoggedIn)
+        window.location.href = '/';
+    try {
+      await axios.delete(`${process.env.REACT_APP_OEA_BACKEND_HOST}/mobile/${searchValue}`);
+      setMessage('Mobile update remove successfully');
+    } catch (error) {
+      setMessage('Failed to remove mobile update');
+    }
   }
   
   const logout = () => {
-    Cookies.remove('token');
+    Cookies.remove(process.env.REACT_APP_TOKEN);
     window.location.href = '/';
   }
 
   return (
-    <div>
+    <div style={{ overflow: 'auto', maxHeight: '800px' }}>
       <div style={{ textAlign: 'right', marginBottom: '20px', position: 'top' }}>
-      <button className="red-button" onClick={logout}>logout</button>
+        <button className="red-button" onClick={logout}>logout</button>
       </div>
-        <div className="app">
+      <div className="app">
         <div className="center">
-            <p style={{ fontSize: '20px', color: 'green' }} >{message}</p>
-            <input
-                className="input"
-                type="number"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Enter a number"
-                autoComplete="on" // Enable autocompletion
-                list="data-keys" // Specify the datalist ID for autocompletion
-            />
-            <datalist id="data-keys">
+          <p style={{ fontSize: '26px', color: 'green' }} >{message}</p>
+          <input
+            className="input"
+            type="number"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            placeholder="Enter a number"
+            autoComplete="on" // Enable autocompletion
+            list="data-keys" // Specify the datalist ID for autocompletion
+          />
+          <datalist id="data-keys">
             {jsonData.map((item, index) => (
-                <option key={index} value={item.Code} />
+              <option key={index} value={item.Code} />
             ))}
-            </datalist>
-            <button className="button" onClick={handleSearch}>Search</button>
-            {searchResult && (
+          </datalist>
+          <button className="button" onClick={handleSearch}>Search</button>
+          {searchResult && (
             <div>
-                <table className="table">
+              <table className="table">
                 <tbody>
-                    {Object.keys(searchResult).map(key => (
+                  {Object.keys(searchResult).map(key => (
                     <tr key={key}>
-                        <td>{key}</td>
-                        <td><strong>{searchResult[key]}</strong></td>
+                      <td>{key}</td>
+                      <td><strong>{searchResult[key]}</strong></td>
                     </tr>
-                    ))}
+                  ))}
                 </tbody>
-                </table>
-                <button style={{ marginTop: '10px' }} className="button" onClick={handleRegister}>Register Engineer</button>
-                <br/>
-                {/* <a style={{ fontSize: '20px'}} href={process.env.REACT_APP_OEA_BACKEND_HOST+"/register"} target="_blank" >Export Registered Engineers</a>
-                <br/> */}
-                <input
+              </table>
+              <button style={{ marginTop: '10px' }} className="button" onClick={checkRegister}>Check if Registered</button>
+              <br/>
+              <button className="button" onClick={handleRegister}>Register Engineer</button>
+              <br/>
+              <button className="red-button" onClick={handleUnregister}>Unregister Engineer</button>
+              <br/>
+              {/* <a style={{ fontSize: '20px'}} href={process.env.REACT_APP_OEA_BACKEND_HOST+"/register"} target="_blank" >Export Registered Engineers</a>
+              <br/> */}
+              <input
                 className="input"
                 type="number"
                 value={mobileNumberValue}
                 onChange={(e) => setMobileNumberValue(e.target.value)}
                 placeholder="Enter a number"
                 style={{ marginTop: '20px' }}
-                />
-                <br/>
-                <button style={{ marginTop: '10px' }} className="button" onClick={handleMobileNumberUpdate}>Update Mobile Number</button>
-                {/* <br/>
-                <a style={{ fontSize: '20px'}} href={process.env.REACT_APP_OEA_BACKEND_HOST+"/mobile"} target="_blank" >Export Updated Mobiles</a> */}
+              />
+              <br/>
+              <button style={{ marginTop: '10px' }} className="button" onClick={getUpdatedMobileNumber}>Get Updated Mobile Number</button>
+              <br/>
+              <button className="button" onClick={handleMobileNumberUpdate}>Update Mobile Number</button>
+              <br/>
+              <button className="red-button" onClick={removeMobileNumberUpdate}>Remove updated Mobile Number</button>
+              {/* <br/>
+              <a style={{ fontSize: '20px'}} href={process.env.REACT_APP_OEA_BACKEND_HOST+"/mobile"} target="_blank" >Export Updated Mobiles</a> */}
             </div>
-            )}
+          )}
         </div>
-        </div>
+      </div>
     </div>
   );
 }

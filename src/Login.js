@@ -16,7 +16,7 @@ const Login = () => {
     if (username === validUsername && password === validPassword) {
       // Set base64 encoded value in a cookie
       const token = btoa(`${username}:${password}`);
-      Cookies.set('token', token);
+      Cookies.set(process.env.REACT_APP_TOKEN, token);
       // Redirect to main page
       window.location.href = '/main';
     } else {
